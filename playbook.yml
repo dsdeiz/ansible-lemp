@@ -1,0 +1,49 @@
+---
+- hosts: lemp
+  vars:
+    mysql_user_password: root
+    mysql_databases:
+      - name: drupal
+      - name: wordpress
+    mysql_users:
+      - name: drupal
+        host: '%'
+        password: drupal
+        priv: 'drupal.*:ALL'
+      - name: wordpress
+        host: '%'
+        password: wordpress
+        priv: 'wordpress.*:ALL'
+    php_webserver_daemon: nginx
+    php_enable_php_fpm: true
+    php_packages:
+      - php-gd
+      - php-fpm
+      - php-curl
+      - php-zip
+      - php-mysql
+      - php-mbstring
+      - php-xml
+      - php-cli
+    nginx_remove_default_vhost: true
+  roles:
+    - geerlingguy.mysql
+    - geerlingguy.nginx
+    - geerlingguy.php
+  tasks:
+    - name: Download dynamic vhost to location
+      get_url:
+        # 17.04 configuration works here as well.
+        url: https://raw.githubusercontent.com/timhtheos/nginx-dynamic-server-block/master/dynamic-ubuntu17.04-php7.conf
+        dest: /etc/nginx/sites-available/dynamic.conf
+    - name: Remove htpass
+      lineinfile:
+        path: /etc/nginx/sites-available/dynamic.conf
+        regexp: 'auth_'
+        state: absent
+    - name: Enable dynamic vhost
+      file:
+        src: /etc/nginx/sites-available/dynamic.conf
+        dest: /etc/nginx/sites-enabled/dynamic.conf
+        state: link
+      notify: restart nginx
